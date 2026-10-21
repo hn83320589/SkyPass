@@ -7,8 +7,9 @@ namespace SkyPass.Core.Visibility;
 
 /// <summary>
 /// 可目視：衛星受日照（不在圓柱陰影內）且觀測點太陽仰角 &lt; −6°。
-/// 在過境期間每 <see cref="StepSeconds"/> 取樣兩個連續函數（陰影邊界距離、太陽仰角 − 門檻），
-/// 各自變號處以二分法求根，再依各子區間中點判斷是否可目視並合併。總長不足 1 秒視為不可目視。
+/// 日照的進出時刻取自 <see cref="ShadowSearch"/>（含擦邊短陰影的偵測）；太陽仰角門檻則每 <see cref="StepSeconds"/>
+/// 取樣、變號處以二分法求根（太陽仰角每分鐘只變化約 0.25°，不會出現秒級的短區段）。
+/// 再依各子區間中點判斷是否可目視並合併。總長不足 1 秒視為不可目視。
 /// </summary>
 public static class VisibilityCalculator
 {
@@ -27,6 +28,13 @@ public static class VisibilityCalculator
         }
 
         var boundaries = new List<double> { 0.0, total };
+        var shadow = ShadowSearch.Find(propagator, from, to);
+        boundaries.AddRange(shadow.Events.Select(e => e.Time.SecondsSince(from)));
+        if (shadow.StoppedAt is { } stopped)
+        {
+            total = Math.Min(total, stopped.SecondsSince(from));
+        }
+
         var prev = Evaluate(propagator, site, from, 0.0);
         if (prev is null)
         {
@@ -43,14 +51,9 @@ public static class VisibilityCalculator
                 break;
             }
 
-            if ((prev.Value.ShadowMargin < 0) != (next.Value.ShadowMargin < 0))
-            {
-                boundaries.Add(Bisect(propagator, site, from, prev.Value, next.Value, static e => e.ShadowMargin));
-            }
-
             if ((prev.Value.SunMargin < 0) != (next.Value.SunMargin < 0))
             {
-                boundaries.Add(Bisect(propagator, site, from, prev.Value, next.Value, static e => e.SunMargin));
+                boundaries.Add(BisectSun(propagator, site, from, prev.Value, next.Value));
             }
 
             prev = next.Value;
@@ -109,9 +112,9 @@ public static class VisibilityCalculator
         return new Eval(offset, Shadow.Margin(state.PositionKm, sun), SunPosition.ElevationDeg(site, t) - SunElevationThresholdDeg);
     }
 
-    private static double Bisect(Sgp4Propagator propagator, ObserverSite site, JulianDate from, Eval lo, Eval hi, Func<Eval, double> g)
+    private static double BisectSun(Sgp4Propagator propagator, ObserverSite site, JulianDate from, Eval lo, Eval hi)
     {
-        var loNegative = g(lo) < 0;
+        var loNegative = lo.SunMargin < 0;
         while (hi.Offset - lo.Offset > RootToleranceSeconds)
         {
             var mid = Evaluate(propagator, site, from, 0.5 * (lo.Offset + hi.Offset));
@@ -120,7 +123,7 @@ public static class VisibilityCalculator
                 break;
             }
 
-            if ((g(mid.Value) < 0) == loNegative)
+            if ((mid.Value.SunMargin < 0) == loNegative)
             {
                 lo = mid.Value;
             }

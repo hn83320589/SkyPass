@@ -31,6 +31,17 @@ public static class PassPredictor
 {
     public static PredictionResult Predict(PredictionRequest request, IProgress<PredictionProgress>? progress = null, CancellationToken cancellationToken = default)
     {
+        // 進入平行處理前先驗證，避免例外被包成 AggregateException
+        if (request.End.SecondsSince(request.Start) < 0)
+        {
+            throw new ArgumentException($"時間範圍終點早於起點（{request.Start.ToUtc():O} → {request.End.ToUtc():O}）。", nameof(request));
+        }
+
+        if (request.MaskDeg is < -90 or >= 90 || double.IsNaN(request.MaskDeg))
+        {
+            throw new ArgumentException($"遮罩仰角 {request.MaskDeg} 不合法。", nameof(request));
+        }
+
         var site = new ObserverSite(request.Observer);
         var count = request.Satellites.Count;
         var perSatellite = new (IReadOnlyList<SatellitePass> Passes, List<PredictionDiagnostic> Diagnostics)[count];

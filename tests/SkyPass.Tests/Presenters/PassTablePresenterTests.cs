@@ -95,6 +95,23 @@ public class PassTablePresenterTests
     }
 
     [Fact]
+    public void Filtering_by_time_range_keeps_overlapping_passes()
+    {
+        var p = Presenter();
+
+        // 過境 AOS 為 0、30、60、95 分鐘，各持續 10 分鐘；範圍 [41, 65] 分鐘只與第 3 個重疊
+        p.SetFilter(PassFilter.None with { From = T0.AddSeconds(41 * 60), To = T0.AddSeconds(65 * 60) });
+        Assert.Equal(["CSS (TIANHE)"], p.Rows.Select(r => r.Satellite));
+
+        // 邊界只碰到（LOS 恰為範圍起點）也算重疊
+        p.SetFilter(PassFilter.None with { From = T0.AddSeconds(40 * 60) });
+        Assert.Equal(3, p.Rows.Count);
+
+        p.SetFilter(PassFilter.None with { To = T0.AddSeconds(29 * 60) });
+        Assert.Single(p.Rows);
+    }
+
+    [Fact]
     public void Selection_survives_sorting_and_is_cleared_when_filtered_out()
     {
         var p = Presenter();

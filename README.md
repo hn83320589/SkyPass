@@ -1,6 +1,6 @@
 # SkyPass 過境預報台
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/hn83320589/SkyPass/actions/workflows/ci.yml/badge.svg)](https://github.com/hn83320589/SkyPass/actions/workflows/ci.yml)
 
 給業餘無線電社團使用的**離線**衛星過境預報桌面工具：匯入 TLE 後，自行實作的 SGP4 預報過境、
 畫出天空圖與 24 小時時間軸、計算都卜勒頻移與可目視時段，並提供每秒更新的即時追蹤。
@@ -8,7 +8,7 @@
 
 - **平台**：Windows，C# / .NET 9，Silk.NET（視窗與 OpenGL 3.3）+ ImGui.NET
 - **SGP4**：自行實作（Vallado 2006 近地分支），與參考實作逐點相符（位置 ≤ 1e-6 km、速度 ≤ 1e-9 km/s）
-- **測試**：355 個 xUnit 案例（含 16 組固定種子的隨機性質測試），獨立的暴力過境參考解
+- **測試**：360 個 xUnit 案例（含 16 組固定種子的隨機性質測試），獨立的暴力過境參考解；完整結果見[測試報告](docs/TEST-REPORT.md)
 
 ## 目錄
 
@@ -20,7 +20,7 @@
 
 | 畫面 | 內容 |
 |---|---|
-| **過境預報** | 過境表（依衛星／AOS／最大仰角排序，依名稱、最大仰角下限、僅可目視篩選）、天空圖、24 小時時間軸，三者點選聯動；匯出 CSV |
+| **過境預報** | 過境表（依衛星／AOS／最大仰角排序，依名稱、時間範圍、最大仰角下限、僅可目視篩選）、天空圖、24 小時時間軸，三者點選聯動；匯出 CSV |
 | **天空圖** | 極座標（北在上、東在左、天頂在圓心），軌跡依「可目視／日照／地影」著色，遮罩圈、目前位置 |
 | **時間軸** | 各衛星的過境區段（可目視部分以黃色標示），疊上白天、民用／航海／天文曙暮光與夜晚色帶；目前時刻紅線 |
 | **即時追蹤** | 每秒更新方位角、仰角、距離、距離變化率、接收頻率、都卜勒頻移、AOS／LOS 倒數 |
@@ -189,7 +189,7 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 
 ## 測試
 
-`dotnet test` 共 355 個案例，全部通過。
+`dotnet test` 共 360 個案例，全部通過；逐項驗收檢查、規格限制檢查與量測細節見 [docs/TEST-REPORT.md](docs/TEST-REPORT.md)。
 
 - **性質測試**（16 組，`Property.Run`，固定種子；失敗時訊息列出可用 `Property.Replay(caseSeed)` 重現的種子）：
   UTC↔JD 往返與時間單調性、TLE 往返（格式化→解析→格式化）、目錄歷史規則、大地↔地固往返、TEME→地固保長、
@@ -225,17 +225,17 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 
 | 執行緒 | 耗時 |
 |---:|---:|
-| 1 | 2672 ms |
-| 2 | 1417 ms |
-| 4 | 661 ms |
-| 8 | **322 ms**（驗收要求 ≤ 2 秒） |
-| 24 | 128 ms |
+| 1 | 2640 ms |
+| 2 | 1310 ms |
+| 4 | 748 ms |
+| 8 | **354 ms**（驗收要求 ≤ 2 秒） |
+| 24 | 135 ms |
 
 | 項目 | 數值 |
 |---|---|
-| SGP4 單次呼叫 | 約 740 ns，**0 bytes** 配置（400 萬次呼叫量測） |
+| SGP4 單次呼叫 | 約 700 ns，**0 bytes** 配置（400 萬次呼叫量測） |
 | 傳播 + GMST + TEME→地固 + 站心觀測 | 約 1.0 µs，0 bytes |
-| 即時追蹤單次更新 | 中位數 1.2 µs，P99 2.3 µs（要求 ≤ 1 ms） |
+| 即時追蹤單次更新 | 中位數 1.2 µs，P99.9 3.0 µs，5000 次中最大 47.6 µs（要求 ≤ 1 ms） |
 | 範例資料 30 顆 × 2 天（App 內） | 約 70 ms |
 
 重現：`dotnet test -c Release --filter Category=Performance --logger "console;verbosity=detailed"`。
@@ -290,13 +290,13 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 | 14 | 可見性 | `VisibilityTests` |
 | 15 | 天空圖與時間軸幾何、DPI | `SkyPlotGeometryTests`、`TimelineGeometryTests` |
 | 16 | 平行與取消 | `PassPredictorTests`、`PredictionPresenterTests` |
-| 17 | 即時追蹤 | `LiveTrackingPresenterTests` |
+| 17 | 即時追蹤 | `LiveTrackingPresenterTests`、`LiveTrackingPerformanceTests` |
 | 18 | 持久化 | `StorageTests`、`MainPresenterTests.Read_only_database_and_bad_settings_do_not_crash_startup` |
 | 19 | CSV 匯出 | `PassCsvExporterTests`、`MainPresenterTests.Csv_export_uses_filtered_rows_and_csv_offset` |
 | 20 | 效能 | `PredictionPerformanceTests`、`Sgp4PropagatorTests.Propagate_does_not_allocate`、`PerformanceReportTests` |
 | 21 | 性質測試 | 見[測試](#測試) |
-| 22 | ≥ 200 個案例 | 355 個 |
+| 22 | ≥ 200 個案例 | 360 個（Core＋Presenter 335 個） |
 | 23 | README | 本文件 |
 | 24 | GitHub Actions | `.github/workflows/ci.yml` |
 
-交付物另含：[範例資料與預期過境表](samples/README.md)、[逐步手算範例](docs/hand-calculations.md)、[參考資料產生工具](tools/refgen/README.md)、[設計文件](docs/DESIGN.md)。
+交付物另含：[測試報告](docs/TEST-REPORT.md)、[範例資料與預期過境表](samples/README.md)、[逐步手算範例](docs/hand-calculations.md)、[參考資料產生工具](tools/refgen/README.md)、[設計文件](docs/DESIGN.md)。

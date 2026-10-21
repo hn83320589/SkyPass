@@ -53,6 +53,32 @@ public class CoordinateTests
     }
 
     [Fact]
+    public void Public_teme_to_ecef_takes_time_and_matches_gmst_overload()
+    {
+        var t = JulianDate.FromUtc(new DateTime(2026, 10, 21, 10, 50, 0, DateTimeKind.Utc));
+        var teme = new TemeState(new Vector3d(-4400, 3200, 3700), new Vector3d(-1.5, -6, 3.5));
+
+        Assert.Equal(Frames.TemeToEcef(teme, Gmst.ComputeRad(t)), Frames.TemeToEcef(teme, t));
+    }
+
+    [Fact]
+    public void Public_core_api_exposes_no_radian_parameters_or_members()
+    {
+        // 規格：公開 API 角度一律以度為單位；名稱含 Rad 的成員只能是 internal（Angles 的換算常數除外）
+        var offenders = typeof(Wgs84).Assembly.GetExportedTypes()
+            .Where(t => t != typeof(Angles))
+            .SelectMany(t => t.GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+                .SelectMany(m => m is System.Reflection.MethodBase mb
+                    ? mb.GetParameters().Select(p => $"{t.Name}.{m.Name}({p.Name})").Append($"{t.Name}.{m.Name}")
+                    : [$"{t.Name}.{m.Name}"]))
+            .Where(n => System.Text.RegularExpressions.Regex.IsMatch(n, @"Rad(\b|[A-Z)])"))
+            .Distinct()
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
     public void Range_rate_is_negative_when_approaching()
     {
         var site = new ObserverSite(new Geodetic(10, 20, 0));

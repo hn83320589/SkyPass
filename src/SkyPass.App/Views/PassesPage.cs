@@ -16,7 +16,7 @@ internal static class PassesPage
         var skyWidth = MathF.Min(avail.X * 0.38f, topHeight + 40);
 
         ImGui.BeginChild("##table", new Vector2(avail.X - skyWidth - 8, topHeight), ImGuiChildFlags.Border);
-        DrawFilterBar(main, ui);
+        DrawFilterBar(main, ui, now);
         DrawTable(main);
         ImGui.EndChild();
 
@@ -30,9 +30,35 @@ internal static class PassesPage
         ImGui.EndChild();
     }
 
-    private static void DrawFilterBar(MainPresenter main, UiState ui)
+    private static readonly int[] HourPresets = [0, 6, 12, 24, 48];
+
+    private static void DrawFilterBar(MainPresenter main, UiState ui, JulianDate now)
     {
         var changed = false;
+        ImGui.SetNextItemWidth(150);
+        string HoursLabel(int h) => h == 0 ? Ui.T("全部時間", "All times") : Ui.T($"接下來 {h} 小時", $"Next {h} h");
+        if (ImGui.BeginCombo("##hours", HoursLabel(ui.FilterHours)))
+        {
+            foreach (var h in HourPresets)
+            {
+                if (ImGui.Selectable(HoursLabel(h), h == ui.FilterHours))
+                {
+                    ui.FilterHours = h;
+                    changed = true;
+                }
+            }
+
+            ImGui.EndCombo();
+        }
+
+        // 「接下來 N 小時」以現在為起點，每分鐘更新一次
+        var minute = (long)Math.Floor(now.SecondsSince(JulianDate.FromParts(2451544.5, 0)) / 60);
+        if (ui.FilterHours > 0 && minute != ui.FilterMinute)
+        {
+            changed = true;
+        }
+
+        ImGui.SameLine();
         ImGui.SetNextItemWidth(180);
         changed |= ImGui.InputTextWithHint("##filter", Ui.T("衛星名稱或編號", "Name or NORAD"), ref ui.FilterText, 64);
         ImGui.SameLine();
@@ -42,7 +68,12 @@ internal static class PassesPage
         changed |= ImGui.Checkbox(Ui.T("僅可目視", "Visible only"), ref ui.FilterVisibleOnly);
         if (changed)
         {
-            main.PassTable.SetFilter(new PassFilter(ui.FilterText, ui.FilterMinElevation, ui.FilterVisibleOnly));
+            ui.FilterMinute = minute;
+            main.PassTable.SetFilter(new PassFilter(ui.FilterText, ui.FilterMinElevation, ui.FilterVisibleOnly)
+            {
+                From = ui.FilterHours > 0 ? now : null,
+                To = ui.FilterHours > 0 ? now.AddSeconds(ui.FilterHours * 3600.0) : null,
+            });
         }
 
         ImGui.SameLine();
@@ -82,15 +113,17 @@ internal static class PassesPage
 
         ImGui.TableSetupScrollFreeze(0, 1);
         ImGui.TableSetupColumn(Ui.T("衛星", "Satellite"), ImGuiTableColumnFlags.WidthFixed, 170, (uint)PassSortColumn.Satellite);
-        ImGui.TableSetupColumn("AOS", ImGuiTableColumnFlags.DefaultSort, 0, (uint)PassSortColumn.Aos);
-        ImGui.TableSetupColumn(Ui.T("方位", "Az"), ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("最大仰角時刻", "Max time"), ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("最大仰角", "Max el"), ImGuiTableColumnFlags.PreferSortDescending, 0, (uint)PassSortColumn.MaxElevation);
-        ImGui.TableSetupColumn("LOS", ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("方位", "Az"), ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("持續", "Duration"), ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("可目視", "Visible"), ImGuiTableColumnFlags.NoSort);
-        ImGui.TableSetupColumn(Ui.T("標示", "Flags"), ImGuiTableColumnFlags.NoSort);
+        // 欄寬明確指定：表格第一次繪製時可能尚無資料，自動定寬會被鎖在標題寬度
+        const ImGuiTableColumnFlags fixedNoSort = ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoSort;
+        ImGui.TableSetupColumn("AOS", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.DefaultSort, 165, (uint)PassSortColumn.Aos);
+        ImGui.TableSetupColumn(Ui.T("方位", "Az"), fixedNoSort, 45);
+        ImGui.TableSetupColumn(Ui.T("最大仰角時刻", "Max time"), fixedNoSort, 100);
+        ImGui.TableSetupColumn(Ui.T("最大仰角", "Max el"), ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.PreferSortDescending, 75, (uint)PassSortColumn.MaxElevation);
+        ImGui.TableSetupColumn("LOS", fixedNoSort, 165);
+        ImGui.TableSetupColumn(Ui.T("方位", "Az"), fixedNoSort, 45);
+        ImGui.TableSetupColumn(Ui.T("持續", "Duration"), fixedNoSort, 55);
+        ImGui.TableSetupColumn(Ui.T("可目視", "Visible"), fixedNoSort, 150);
+        ImGui.TableSetupColumn(Ui.T("標示", "Flags"), fixedNoSort, 110);
         ImGui.TableHeadersRow();
 
         var specs = ImGui.TableGetSortSpecs();

@@ -1,18 +1,22 @@
 using SkyPass.Core.Mathematics;
 using SkyPass.Core.Propagation;
+using SkyPass.Core.Time;
 
 namespace SkyPass.Core.Coordinates;
 
 public static class Frames
 {
     /// <summary>地球自轉角速度 ω（rad/s）。</summary>
-    public const double EarthRotationRadPerSec = 7.2921158553e-5;
+    internal const double EarthRotationRadPerSec = 7.2921158553e-5;
+
+    /// <summary>TEME → 地固座標，θ 取 <paramref name="time"/> 的 GMST（IAU-82）。</summary>
+    public static EcefState TemeToEcef(in TemeState teme, in JulianDate time) => TemeToEcef(teme, Gmst.ComputeRad(time));
 
     /// <summary>
-    /// TEME → 地固座標：r' = R(θ)·r；v' = R(θ)·v + (ω·y', −ω·x', 0)，θ = GMST。
+    /// TEME → 地固座標：r' = R(θ)·r；v' = R(θ)·v + (ω·y', −ω·x', 0)，θ = GMST（弧度，內部使用）。
     /// 不處理極移與章動。
     /// </summary>
-    public static EcefState TemeToEcef(in TemeState teme, double gmstRad)
+    internal static EcefState TemeToEcef(in TemeState teme, double gmstRad)
     {
         var c = Math.Cos(gmstRad);
         var s = Math.Sin(gmstRad);
@@ -28,7 +32,7 @@ public static class Frames
     }
 
     /// <summary>以 θ = GMST 把 TEME 方向向量旋轉到地固座標（無速度項）。</summary>
-    public static Vector3d RotateTemeToEcef(in Vector3d v, double gmstRad)
+    internal static Vector3d RotateTemeToEcef(in Vector3d v, double gmstRad)
     {
         var c = Math.Cos(gmstRad);
         var s = Math.Sin(gmstRad);

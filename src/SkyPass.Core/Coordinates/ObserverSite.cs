@@ -64,7 +64,7 @@ public sealed class ObserverSite
 }
 
 /// <summary>單一時刻的完整觀測結果（傳播 + 座標轉換 + 站心觀測），熱路徑零配置。</summary>
-public readonly record struct Observation(TemeState Teme, EcefState Ecef, LookAngles Look, double GmstRad)
+public readonly record struct Observation(TemeState Teme, EcefState Ecef, LookAngles Look)
 {
     public static Sgp4Error Compute(Sgp4Propagator propagator, ObserverSite site, in JulianDate time, out Observation observation)
     {
@@ -75,9 +75,8 @@ public readonly record struct Observation(TemeState Teme, EcefState Ecef, LookAn
             return error;
         }
 
-        var gmst = Gmst.ComputeRad(time);
-        var ecef = Frames.TemeToEcef(teme, gmst);
-        observation = new Observation(teme, ecef, site.Observe(ecef), gmst);
+        var ecef = Frames.TemeToEcef(teme, Gmst.ComputeRad(time));
+        observation = new Observation(teme, ecef, site.Observe(ecef));
         return Sgp4Error.None;
     }
 }

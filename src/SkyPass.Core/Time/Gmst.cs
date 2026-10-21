@@ -6,8 +6,11 @@ public static class Gmst
     private const double TwoPi = 2.0 * Math.PI;
     private const double DegToRad = Math.PI / 180.0;
 
-    /// <summary>回傳 GMST（弧度），範圍 [0, 2π)。</summary>
-    public static double ComputeRad(in JulianDate jdUt1)
+    /// <summary>回傳 GMST（度），範圍 [0, 360)。公開 API 角度一律以度為單位。</summary>
+    public static double ComputeDeg(in JulianDate jdUt1) => ComputeRad(jdUt1) * (180.0 / Math.PI);
+
+    /// <summary>回傳 GMST（弧度），範圍 [0, 2π)。內部計算使用；驗收以 1e-9 rad 檢驗此值。</summary>
+    internal static double ComputeRad(in JulianDate jdUt1)
     {
         var t = ((jdUt1.Day - 2451545.0) + jdUt1.Fraction) / 36525.0;
         var thetaSec = -6.2e-6 * t * t * t + 0.093104 * t * t

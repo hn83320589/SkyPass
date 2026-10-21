@@ -31,6 +31,15 @@ public class GmstTests
         Assert.True(count >= 100);
     }
 
+    [Fact]
+    public void Public_api_returns_degrees()
+    {
+        var jd = JulianDate.FromParts(2451544.5, 0.5);
+
+        Assert.Equal(280.46061837, Gmst.ComputeDeg(jd), 1e-7);
+        Assert.Equal(Gmst.ComputeRad(jd) * 180 / Math.PI, Gmst.ComputeDeg(jd), 1e-12);
+    }
+
     private static double AngleDiff(double a, double b)
     {
         var d = a - b;

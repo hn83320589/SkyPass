@@ -10,7 +10,8 @@ namespace SkyPass.Data;
 /// 以 SQLite 保存軌道資料目錄。TLE 以原文保存、讀回時重新解析，因此往返無損。
 /// 資料庫版本以 <c>PRAGMA user_version</c> 記錄；版本過新或檔案損毀時回報狀態並拒絕寫入，不擲例外。
 /// </summary>
-public sealed class SqliteTleCatalogStore(string databasePath) : ITleCatalogStore
+/// <param name="clock">取得匯入時刻用；預設 <see cref="TimeProvider.System"/>。</param>
+public sealed class SqliteTleCatalogStore(string databasePath, TimeProvider? clock = null) : ITleCatalogStore
 {
     public const int SchemaVersion = 1;
 
@@ -71,7 +72,7 @@ public sealed class SqliteTleCatalogStore(string databasePath) : ITleCatalogStor
         using var conn = Open();
         using var tx = conn.BeginTransaction();
         Execute(conn, tx, "DELETE FROM tle_set; DELETE FROM satellite;");
-        var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        var now = (clock ?? TimeProvider.System).GetUtcNow().ToString("O", CultureInfo.InvariantCulture);
         foreach (var entry in catalog.Entries)
         {
             using var sat = conn.CreateCommand();

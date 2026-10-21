@@ -19,8 +19,10 @@ public sealed record PredictionState(PredictionStatus Status, PredictionResult? 
 /// 背景預報協調：同一時間只有一個執行中的預報，新的請求會取消舊的。
 /// 狀態以不可變快照發佈，UI 執行緒每幀讀取即可，不需要跨執行緒事件。
 /// </summary>
-public sealed class PredictionPresenter
+/// <param name="clock">量測預報耗時用；預設 <see cref="TimeProvider.System"/>。</param>
+public sealed class PredictionPresenter(TimeProvider? clock = null)
 {
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly Lock _gate = new();
     private PredictionState _state = new(PredictionStatus.Idle, null, null, null, 0, null);
     private CancellationTokenSource? _cts;
@@ -61,7 +63,7 @@ public sealed class PredictionPresenter
     private void Run(PredictionRequest request, int runId, CancellationTokenSource cts)
     {
         var sink = new ProgressSink(this, runId);
-        var started = System.Diagnostics.Stopwatch.StartNew();
+        var started = _clock.GetTimestamp();
         try
         {
             var result = PassPredictor.Predict(request, sink, cts.Token);
@@ -71,7 +73,7 @@ public sealed class PredictionPresenter
                 Result = result,
                 Message = null,
                 Version = s.Version + 1,
-                Elapsed = started.Elapsed,
+                Elapsed = _clock.GetElapsedTime(started),
             });
         }
         catch (OperationCanceledException)

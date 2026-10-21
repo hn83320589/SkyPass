@@ -32,7 +32,7 @@ internal sealed class AppHost : IDisposable
     {
         _options = options;
         _clock = options.Now is { } now ? new ShiftedTimeProvider(now) : TimeProvider.System;
-        _main = new MainPresenter(new SqliteTleCatalogStore(options.Paths.DatabasePath), new JsonSettingsStore(options.Paths.SettingsPath), _clock);
+        _main = new MainPresenter(new SqliteTleCatalogStore(options.Paths.DatabasePath, _clock), new JsonSettingsStore(options.Paths.SettingsPath), _clock);
         _window = Window.Create(WindowOptions.Default with
         {
             Size = new Vector2D<int>(1440, 900),
@@ -233,6 +233,10 @@ internal sealed class UiState
     public float FilterMinElevation;
 
     public bool FilterVisibleOnly;
+
+    public int FilterHours;
+
+    public long FilterMinute;
 
     public string ImportPath = "";
 

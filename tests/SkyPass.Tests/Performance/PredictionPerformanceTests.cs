@@ -8,6 +8,7 @@ namespace SkyPass.Tests.Performance;
 
 /// <summary>驗收 #20：100 顆 × 7 天 × 遮罩 10° 在 8 核心機器上 ≤ 2 秒。</summary>
 [Trait("Category", "Performance")]
+[Collection(PerformanceCollection.Name)]
 public class PredictionPerformanceTests(ITestOutputHelper output)
 {
     [Fact]

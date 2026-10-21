@@ -1,14 +1,12 @@
-using System.Diagnostics;
 using SkyPass.Core.Coordinates;
 using SkyPass.Core.Tle;
 using SkyPass.Presenters;
 using SkyPass.Tests.Support;
-using Xunit.Abstractions;
 
 namespace SkyPass.Tests.Presenters;
 
 /// <summary>驗收 #17：每秒更新的數值與參考資料一致、單次更新 ≤ 1 ms、衛星改變／時間回溯／軌道資料更新後狀態正確。</summary>
-public class LiveTrackingPresenterTests(ITestOutputHelper output)
+public class LiveTrackingPresenterTests
 {
     private static readonly IReadOnlyList<string[]> Reference = TestData.ReadCsv("live_tracking.csv").ToList();
     private static readonly TleSet Iss = TleParser.Parse($"{Reference[0][1]}\n{Reference[0][2]}").Sets.Single();
@@ -68,30 +66,7 @@ public class LiveTrackingPresenterTests(ITestOutputHelper output)
         Assert.True(during.NextPass is null || during.NextPass.Aos.SecondsSince(during.CurrentPass!.Los) > 0);
     }
 
-    [Fact]
-    public async Task Single_update_takes_at_most_one_millisecond()
-    {
-        var (p, clock) = Create(TestData.Utc(Reference[0][0]));
-        await p.WhenIdleAsync();
-        for (var i = 0; i < 100; i++)
-        {
-            p.Tick(); // 暖機
-        }
-
-        var samples = new List<double>();
-        for (var i = 0; i < 2000; i++)
-        {
-            clock.Advance(TimeSpan.FromSeconds(1));
-            var sw = Stopwatch.StartNew();
-            p.Tick();
-            samples.Add(sw.Elapsed.TotalMilliseconds);
-        }
-
-        samples.Sort();
-        var p99 = samples[(int)(samples.Count * 0.99)];
-        output.WriteLine($"單次更新：中位數 {samples[samples.Count / 2] * 1000:F1} µs，P99 {p99 * 1000:F1} µs，最大 {samples[^1] * 1000:F1} µs");
-        Assert.True(p99 <= 1.0, $"P99 {p99:F3} ms 超過 1 ms");
-    }
+    // 單次更新耗時的效能測試在 Performance/LiveTrackingPerformanceTests（獨立、不平行執行）
 
     [Fact]
     public async Task Changing_satellite_switches_readings_and_pass_cache()

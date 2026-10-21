@@ -29,6 +29,7 @@ public sealed class MainPresenter
         Settings = new SettingsPresenter(settingsStore, Diagnostics);
         Catalog = new CatalogPresenter(catalogStore, Diagnostics, clock);
         LiveTracking = new LiveTrackingPresenter(clock);
+        Prediction = new PredictionPresenter(clock);
     }
 
     public DiagnosticsPresenter Diagnostics { get; }
@@ -37,7 +38,7 @@ public sealed class MainPresenter
 
     public CatalogPresenter Catalog { get; }
 
-    public PredictionPresenter Prediction { get; } = new();
+    public PredictionPresenter Prediction { get; }
 
     public PassTablePresenter PassTable { get; } = new();
 

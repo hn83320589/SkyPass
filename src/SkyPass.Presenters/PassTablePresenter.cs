@@ -15,6 +15,12 @@ public enum PassSortColumn
 public sealed record PassFilter(string? Text, double MinMaxElevationDeg, bool VisibleOnly)
 {
     public static readonly PassFilter None = new(null, 0, false);
+
+    /// <summary>時間範圍起點（UTC）；只保留與 [From, To] 重疊的過境。null 表示不限。</summary>
+    public JulianDate? From { get; init; }
+
+    /// <summary>時間範圍終點（UTC）；null 表示不限。</summary>
+    public JulianDate? To { get; init; }
 }
 
 /// <summary>過境表的一列（已依顯示時區格式化）。</summary>
@@ -124,6 +130,15 @@ public sealed class PassTablePresenter
         }
 
         query = query.Where(p => p.MaxElevationDeg >= f.MinMaxElevationDeg);
+        if (f.From is { } from)
+        {
+            query = query.Where(p => p.Los.SecondsSince(from) >= 0);
+        }
+
+        if (f.To is { } to)
+        {
+            query = query.Where(p => to.SecondsSince(p.Aos) >= 0);
+        }
         if (f.VisibleOnly)
         {
             query = query.Where(p => p.VisibleIntervals.Count > 0);

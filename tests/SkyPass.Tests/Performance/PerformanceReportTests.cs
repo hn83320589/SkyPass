@@ -10,6 +10,7 @@ namespace SkyPass.Tests.Performance;
 
 /// <summary>產生 README 的效能數據（以 Release 建置執行：dotnet test -c Release --filter Category=Performance）。</summary>
 [Trait("Category", "Performance")]
+[Collection(PerformanceCollection.Name)]
 public class PerformanceReportTests(ITestOutputHelper output)
 {
     [Fact]

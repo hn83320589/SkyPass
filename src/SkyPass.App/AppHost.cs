@@ -70,6 +70,11 @@ internal sealed class AppHost : IDisposable
         {
             var io = ImGui.GetIO();
             io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard;
+            unsafe
+            {
+                io.NativePtr->IniFilename = null; // 版面不需保存，避免在工作目錄寫出 imgui.ini
+            }
+
             if (File.Exists(ChineseFontPath))
             {
                 // 中文完整字集不含數學符號與幾何圖形，另外補上介面用到的字元

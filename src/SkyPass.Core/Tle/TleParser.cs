@@ -101,33 +101,50 @@ public static partial class TleParser
         return sum % 10;
     }
 
-    /// <summary>兩位數年份：57–99 → 1957–1999，00–56 → 2000–2056。</summary>
-    public static int ExpandEpochYear(int twoDigitYear) => twoDigitYear >= 57 ? 1900 + twoDigitYear : 2000 + twoDigitYear;
+    /// <summary>Alpha-5 首字元（不含 I、O），依序代表 10–33。</summary>
+    internal const string Alpha5Letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
-    /// <summary>看起來像軌道資料行：「數字 + 空白 + 衛星編號」。名稱行不符合此形狀。</summary>
-    private static bool IsElementLine(string line)
+    /// <summary>
+    /// 解析 5 字元的衛星編號欄：數字（可有前導空白）或 Alpha-5（首字元 A–Z 不含 I、O 代表 10–33，後接 4 位數字），
+    /// 例如 "E8493" = 14 × 10000 + 8493 = 148493，範圍到 "Z9999" = 339999。格式不符時擲出 <see cref="FormatException"/>。
+    /// </summary>
+    public static int ParseSatelliteNumber(string field) =>
+        TryParseSatelliteNumber(field, out var value) ? value : throw new FormatException($"衛星編號格式錯誤：「{field}」。");
+
+    internal static bool TryParseSatelliteNumber(ReadOnlySpan<char> field, out int value)
     {
-        if (line.Length < 7 || !char.IsAsciiDigit(line[0]) || line[1] != ' ')
+        value = 0;
+        if (field.Length != 5)
         {
             return false;
         }
 
-        var number = line.AsSpan(2, 5).TrimStart(' ');
-        if (number.Length == 0)
+        var letter = Alpha5Letters.IndexOf(field[0]);
+        if (letter >= 0)
         {
-            return false;
-        }
-
-        foreach (var c in number)
-        {
-            if (!char.IsAsciiDigit(c))
+            if (!int.TryParse(field[1..], NumberStyles.None, Inv, out var rest))
             {
                 return false;
             }
+
+            value = (letter + 10) * 10000 + rest;
+            return true;
         }
 
-        return true;
+        var trimmed = field.TrimStart(' ');
+        return trimmed.Length > 0 && int.TryParse(trimmed, NumberStyles.None, Inv, out value);
     }
+
+    /// <summary>兩位數年份：57–99 → 1957–1999，00–56 → 2000–2056。</summary>
+    public static int ExpandEpochYear(int twoDigitYear) => twoDigitYear >= 57 ? 1900 + twoDigitYear : 2000 + twoDigitYear;
+
+    /// <summary>
+    /// 看起來像軌道資料行：「數字 + 空白」開頭，且衛星編號可解析（含 Alpha-5），或長度已接近 69 字元。
+    /// 後者讓編號欄寫錯的資料行仍交給欄位驗證，回報精確的行號與原因，而不是被當成名稱行。
+    /// </summary>
+    private static bool IsElementLine(string line) =>
+        line.Length >= 7 && char.IsAsciiDigit(line[0]) && line[1] == ' ' &&
+        (line.Length >= 60 || TryParseSatelliteNumber(line.AsSpan(2, 5), out _));
 
     private static string CleanName(string line)
     {
@@ -146,7 +163,7 @@ public static partial class TleParser
         var errorCount = errors.Count;
         var r1 = new FieldReader(line1, lineNo1, errors);
         r1.Blank(1, 8, 17, 32, 43, 52, 61, 63);
-        var norad1 = r1.Integer(2, 5, SatNumberRegex(), "衛星編號");
+        var norad1 = r1.SatelliteNumber(2);
         var classification = r1.Char(7, "UCS", "分類");
         var designator = line1.Substring(9, 8).Trim();
         var yy = r1.Integer(18, 2, TwoDigitsRegex(), "epoch 年份");
@@ -159,7 +176,7 @@ public static partial class TleParser
 
         var r2 = new FieldReader(line2, lineNo2, errors);
         r2.Blank(1, 7, 16, 25, 33, 42, 51);
-        var norad2 = r2.Integer(2, 5, SatNumberRegex(), "衛星編號");
+        var norad2 = r2.SatelliteNumber(2);
         var inclination = r2.Decimal(8, 8, AngleRegex(), "傾角");
         var raan = r2.Decimal(17, 8, AngleRegex(), "升交點赤經");
         var eccentricity = r2.ImpliedDecimal(26, 7, "偏心率");
@@ -264,6 +281,16 @@ public static partial class TleParser
             }
         }
 
+        public int SatelliteNumber(int start)
+        {
+            if (!TryParseSatelliteNumber(line.AsSpan(start, 5), out var value))
+            {
+                FormatError(start, 5, "衛星編號");
+            }
+
+            return value;
+        }
+
         public char Char(int index, string allowed, string field)
         {
             if (!allowed.Contains(line[index]))
@@ -344,8 +371,6 @@ public static partial class TleParser
                 $"{field}格式錯誤（第 {start + 1}–{start + length} 欄：「{line.Substring(start, length)}」）。"));
     }
 
-    [GeneratedRegex(@"^ *\d+$")]
-    private static partial Regex SatNumberRegex();
 
     [GeneratedRegex(@"^\d\d$")]
     private static partial Regex TwoDigitsRegex();

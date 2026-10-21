@@ -63,7 +63,7 @@ public class TleFormatterTests
         return new TleSet
         {
             Name = $"SAT-{rng.Next(1, 99999)}",
-            NoradId = rng.Next(1, 100000),
+            NoradId = rng.Next(4) == 0 ? rng.Next(100000, 340000) : rng.Next(1, 100000), // 含 Alpha-5 範圍
             Classification = "UCS"[rng.Next(3)],
             InternationalDesignator = $"{year % 100:00}{rng.Next(1, 999):000}{(char)('A' + rng.Next(26))}",
             EpochYear = year,

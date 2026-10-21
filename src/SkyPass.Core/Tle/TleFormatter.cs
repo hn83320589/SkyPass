@@ -11,7 +11,7 @@ public static class TleFormatter
     {
         var line1 = string.Concat(
             "1 ",
-            tle.NoradId.ToString("D5", Inv),
+            FormatSatelliteNumber(tle.NoradId),
             tle.Classification.ToString(),
             " ",
             tle.InternationalDesignator.PadRight(8)[..8],
@@ -31,7 +31,7 @@ public static class TleFormatter
 
         var line2 = string.Concat(
             "2 ",
-            tle.NoradId.ToString("D5", Inv),
+            FormatSatelliteNumber(tle.NoradId),
             " ",
             FormatAngle(tle.InclinationDeg),
             " ",
@@ -47,6 +47,19 @@ public static class TleFormatter
             tle.RevolutionNumber.ToString(Inv).PadLeft(5));
 
         return (WithChecksum(line1), WithChecksum(line2));
+    }
+
+    /// <summary>衛星編號欄：0–99999 為 5 位數字；100000–339999 為 Alpha-5（例如 148493 → "E8493"）。</summary>
+    public static string FormatSatelliteNumber(int noradId)
+    {
+        if (noradId is < 0 or > 339999)
+        {
+            throw new ArgumentOutOfRangeException(nameof(noradId), noradId, "衛星編號需介於 0 與 339999（Alpha-5 上限 Z9999）。");
+        }
+
+        return noradId < 100000
+            ? noradId.ToString("D5", Inv)
+            : TleParser.Alpha5Letters[noradId / 10000 - 10] + (noradId % 10000).ToString("D4", Inv);
     }
 
     /// <summary>格式化為「符號、5 位尾數、符號、1 位指數」，例如 −0.11606e-4 → "-11606-4"；零為 " 00000-0"。</summary>

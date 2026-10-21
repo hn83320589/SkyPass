@@ -227,6 +227,59 @@ public class TleParserTests
         Assert.All(result.Errors, e => Assert.False(string.IsNullOrWhiteSpace(e.Message)));
     }
 
+    [Theory]
+    [InlineData("A0000", 100000)]
+    [InlineData("E8493", 148493)]
+    [InlineData("H9999", 179999)]
+    [InlineData("J0000", 180000)]   // 跳過 I
+    [InlineData("P0001", 230001)]   // 跳過 O
+    [InlineData("Z9999", 339999)]
+    public void Alpha5_satellite_numbers(string field, int expected)
+    {
+        var l1 = Set(IssLine1, 2, field);
+        var l2 = Set(IssLine2, 2, field);
+
+        var result = TleParser.Parse($"ALPHA5\n{l1}\n{l2}");
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(expected, Assert.Single(result.Sets).NoradId);
+    }
+
+    [Theory]
+    [InlineData("I0001")]   // I 與 O 不使用，避免與 1、0 混淆
+    [InlineData("O0001")]
+    [InlineData("a0001")]   // 必須大寫
+    [InlineData("AB001")]
+    public void Invalid_alpha5_numbers_are_field_errors(string field)
+    {
+        var result = TleParser.Parse($"X\n{Set(IssLine1, 2, field)}\n{Set(IssLine2, 2, field)}");
+
+        Assert.Empty(result.Sets);
+        Assert.Contains(result.Errors, e => e.Kind == TleErrorKind.FieldFormat && e.LineNumber == 2);
+    }
+
+    [Theory]
+    [InlineData(0, "00000")]
+    [InlineData(99999, "99999")]
+    [InlineData(100000, "A0000")]
+    [InlineData(148493, "E8493")]
+    [InlineData(180000, "J0000")]
+    [InlineData(230001, "P0001")]
+    [InlineData(339999, "Z9999")]
+    public void Satellite_number_encoding(int norad, string expected)
+    {
+        Assert.Equal(expected, TleFormatter.FormatSatelliteNumber(norad));
+        Assert.Equal(norad, TleParser.ParseSatelliteNumber(expected));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(340000)]
+    public void Satellite_number_out_of_alpha5_range_fails_fast(int norad)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => TleFormatter.FormatSatelliteNumber(norad));
+    }
+
     [Fact]
     public void Trailing_whitespace_is_tolerated()
     {

@@ -1,3 +1,4 @@
 * text=auto eol=lf
 *.tle -text
 tests/SkyPass.Tests/TestData/** -text
+samples/*.csv -text

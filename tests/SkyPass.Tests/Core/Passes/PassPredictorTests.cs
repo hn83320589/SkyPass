@@ -49,6 +49,31 @@ public class PassPredictorTests
     }
 
     [Fact]
+    public void Property_result_is_independent_of_thread_count()
+    {
+        var pool = Constellation(40);
+        Property.Run("結果與執行緒數無關（驗收 #16、#21）", seed: 16001, iterations: 12, rng =>
+        {
+            var sats = pool.OrderBy(_ => rng.Next()).Take(rng.Next(3, 15)).ToList();
+            var site = new Geodetic(rng.NextDouble() * 140 - 70, rng.NextDouble() * 360 - 180, 0);
+            var start = sats[0].Epoch.AddSeconds(rng.NextDouble() * 86400);
+            var request = new PredictionRequest(sats, site, start, start.AddSeconds(86400 * (0.5 + rng.NextDouble())), rng.NextDouble() * 20);
+
+            var one = PassPredictor.Predict(request with { MaxDegreeOfParallelism = 1 });
+            var many = PassPredictor.Predict(request with { MaxDegreeOfParallelism = rng.Next(2, 2 * Environment.ProcessorCount + 1) });
+
+            Assert.Equal(one.Passes.Count, many.Passes.Count);
+            for (var i = 0; i < one.Passes.Count; i++)
+            {
+                Assert.Equal(one.Passes[i] with { VisibleIntervals = [] }, many.Passes[i] with { VisibleIntervals = [] });
+                Assert.Equal(one.Passes[i].VisibleIntervals, many.Passes[i].VisibleIntervals);
+            }
+
+            Assert.Equal(one.Diagnostics, many.Diagnostics);
+        });
+    }
+
+    [Fact]
     public void Passes_are_sorted_by_aos_then_norad()
     {
         var result = PassPredictor.Predict(Request(Constellation(20), 1));

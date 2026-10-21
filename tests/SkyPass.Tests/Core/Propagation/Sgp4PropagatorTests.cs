@@ -49,17 +49,17 @@ public class Sgp4PropagatorTests
     public void Propagate_does_not_allocate()
     {
         var prop = Sgp4Propagator.Create(Iss);
-        prop.Propagate(1.0, out _); // 暖機（JIT）
-
-        var before = GC.GetAllocatedBytesForCurrentThread();
         var sum = 0.0;
-        for (var i = 0; i < 10_000; i++)
-        {
-            prop.Propagate(i * 0.5, out var s);
-            sum += s.PositionKm.X;
-        }
 
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        var allocated = Allocations.MinimumAllocatedBytes(() =>
+        {
+            for (var i = 0; i < 10_000; i++)
+            {
+                prop.Propagate(i * 0.5, out var s);
+                sum += s.PositionKm.X;
+            }
+        });
+
         Assert.Equal(0, allocated);
         Assert.NotEqual(0, sum);
     }

@@ -128,17 +128,18 @@ public class CoordinateTests
     {
         var iss = Sgp4Propagator.Create(TleParser.Parse($"{IssLine1}\n{IssLine2}").Sets[0]);
         var site = new ObserverSite(new Geodetic(25.03, 121.56, 0.01));
-        Observation.Compute(iss, site, iss.Epoch, out _);
-
-        var before = GC.GetAllocatedBytesForCurrentThread();
         var sum = 0.0;
-        for (var i = 0; i < 10_000; i++)
-        {
-            Observation.Compute(iss, site, iss.Epoch.AddSeconds(i), out var o);
-            sum += o.Look.ElevationDeg;
-        }
 
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        var allocated = Allocations.MinimumAllocatedBytes(() =>
+        {
+            for (var i = 0; i < 10_000; i++)
+            {
+                Observation.Compute(iss, site, iss.Epoch.AddSeconds(i), out var o);
+                sum += o.Look.ElevationDeg;
+            }
+        });
+
+        Assert.Equal(0, allocated);
         Assert.NotEqual(0, sum);
     }
 

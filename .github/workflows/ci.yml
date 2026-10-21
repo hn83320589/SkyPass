@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore SkyPass.sln
+
+      - name: Build (含 App)
+        run: dotnet build SkyPass.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test SkyPass.sln -c Release --no-build --logger "trx;LogFileName=results.trx" --logger "console;verbosity=normal"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+
+      - name: Publish win-x64
+        run: dotnet publish src/SkyPass.App/SkyPass.App.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
+
+      - name: Upload win-x64 publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyPass-win-x64
+          path: publish/win-x64

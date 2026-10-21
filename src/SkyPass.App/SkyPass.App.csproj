@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.Windowing" />
+    <PackageReference Include="Silk.NET.Input" />
+    <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SkyPass.Core\SkyPass.Core.csproj" />
+    <ProjectReference Include="..\SkyPass.Data\SkyPass.Data.csproj" />
+    <ProjectReference Include="..\SkyPass.Presenters\SkyPass.Presenters.csproj" />
+  </ItemGroup>
+</Project>

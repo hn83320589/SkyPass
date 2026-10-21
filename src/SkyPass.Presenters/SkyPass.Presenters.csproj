@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 畫面狀態與背景計算協調；不得引用 UI。 -->
+  <ItemGroup>
+    <ProjectReference Include="..\SkyPass.Core\SkyPass.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="SkyPass.Tests" />
+  </ItemGroup>
+</Project>

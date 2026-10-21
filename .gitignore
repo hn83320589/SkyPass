@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+publish/
+tools/refgen/.venv/
+__pycache__/

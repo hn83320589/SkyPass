@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 純計算函式庫：不得引用任何 UI、OpenGL、Windows 專用組件或外部套件。 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SkyPass.Tests" />
+  </ItemGroup>
+</Project>

@@ -253,7 +253,9 @@ public static class PassFinder
         {
             var tle = propagator.Tle;
             var kind = error == Sgp4Error.Decayed ? DiagnosticKind.Decayed : DiagnosticKind.PropagationError;
-            var what = kind == DiagnosticKind.Decayed ? "衰減" : "傳播失敗";
+            var what = kind == DiagnosticKind.Decayed ? "衰減"
+                : error == Sgp4Error.MeanEccentricity ? "傳播失敗（平均偏心率超出範圍，通常表示阻力已使軌道衰減）"
+                : "傳播失敗";
             return new PredictionDiagnostic(tle.NoradId, tle.Name, kind, time, error,
                 $"{tle.Name}（NORAD {tle.NoradId}）於 {time.ToUtc():yyyy-MM-dd HH:mm:ss} UTC {what}（SGP4 錯誤碼 {(int)error}：{error}），預測在此停止。");
         }

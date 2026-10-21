@@ -23,10 +23,21 @@ python -m venv .venv
 | `gen_time.py` | `time_gmst.csv` | 儒略日（以 `datetime.toordinal()` 換算）與 GMST（IAU-82 公式，以 `decimal` 60 位有效數字計算）。只用標準函式庫 |
 | `gen_sgp4.py` | `sgp4_published.csv`、`sgp4_random.csv` | 以 python-sgp4 的 `Satrec.twoline2rv` + `sgp4_tsince` 產生；python-sgp4 的加速版直接呼叫 Vallado 官方 C++ 程式碼 |
 
+| `gen_coords.py` | `coords.csv`、`sun.csv`、`shadow_events.csv` | 衛星狀態由 python-sgp4 產生，TEME→地固、大地→地固、站心觀測、太陽位置、圓柱陰影依假設事項公式以 Python 獨立實作；陰影進出時刻逐秒取樣後二分到 1e-7 秒 |
+| `gen_doppler.py` | `doppler.csv`、`live_tracking.csv` | 過境期間每 10 秒的距離變化率與 145.8 MHz 接收頻率；即時追蹤參考為一次過境前後「整秒 UTC」逐秒輸出 |
+| `gen_samples.py` | `samples/skypass-samples.tle`、`samples/expected-passes.csv` | 範例 TLE 與預期過境表（逐秒暴力搜尋） |
+| `gen_hand_examples.py` | `docs/hand-calculations.md`、`hand_examples.csv` | 時間、GMST、座標、都卜勒、陰影各 10 組逐步手算範例 |
+
 ```powershell
 .\.venv\Scripts\python -I gen_time.py ..\..\tests\SkyPass.Tests\TestData
 .\.venv\Scripts\python -I gen_sgp4.py inputs ..\..\tests\SkyPass.Tests\TestData
+.\.venv\Scripts\python -I gen_coords.py inputs ..\..\tests\SkyPass.Tests\TestData
+.\.venv\Scripts\python -I gen_doppler.py inputs ..\..\tests\SkyPass.Tests\TestData
+.\.venv\Scripts\python -I gen_samples.py inputs ..\..\samples
+.\.venv\Scripts\python -I gen_hand_examples.py ..\..\docs ..\..\tests\SkyPass.Tests\TestData
 ```
+
+所有腳本使用固定亂數種子，重新執行會得到相同的檔案。
 
 ## 輸入資料（`inputs/`）
 

@@ -1,4 +1,3 @@
-* text=auto
-*.cs text eol=crlf
+* text=auto eol=lf
 *.tle -text
 tests/SkyPass.Tests/TestData/** -text

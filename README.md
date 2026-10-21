@@ -8,7 +8,7 @@
 
 - **平台**：Windows，C# / .NET 9，Silk.NET（視窗與 OpenGL 3.3）+ ImGui.NET
 - **SGP4**：自行實作（Vallado 2006 近地分支），與參考實作逐點相符（位置 ≤ 1e-6 km、速度 ≤ 1e-9 km/s）
-- **測試**：360 個 xUnit 案例（含 16 組固定種子的隨機性質測試），獨立的暴力過境參考解；完整結果見[測試報告](docs/TEST-REPORT.md)
+- **測試**：384 個 xUnit 案例（含 16 組固定種子的隨機性質測試），獨立的暴力過境參考解；完整結果見[測試報告](docs/TEST-REPORT.md)
 
 ## 目錄
 
@@ -138,6 +138,8 @@ App 繪製（只讀快照）
 錯誤組別回報**檔案實際行號**與原因後跳過，其餘照常匯入。偏心率為隱含小數點的 7 位數字；
 BSTAR 與二階項為「符號、5 位尾數、符號、1 位指數」，數值以 `尾數 × 10^指數` 計算——與 Vallado `twoline2rv` 相同的運算順序，
 確保 SGP4 的輸入與參考實作逐位元一致。epoch 年份 57–99 為 19xx、00–56 為 20xx。
+衛星編號支援 **Alpha-5**：首字元 A–Z（不含 I、O）代表 10–33、後接 4 位數字，例如 `E8493` = 148493，上限 `Z9999` = 339999；
+格式化時 100000 以上自動輸出 Alpha-5。
 
 ### SGP4
 
@@ -176,7 +178,10 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 
 ### 日照、可目視與都卜勒
 
-- 太陽位置採低精度公式；圓柱陰影以連續的邊界函數（r·ŝ < 0 側為 |r⊥| − Re，否則 |r| − Re）每 10 秒取樣、二分到 1e-4 秒求進出時刻。
+- 太陽位置採低精度公式；圓柱陰影以連續的邊界函數 m（r·ŝ < 0 側為 |r⊥| − Re，否則 |r| − Re）每 10 秒取樣，
+  m 變號處二分到 1e-4 秒求進出時刻。和過境搜尋一樣，同時以解析式計算 m 的變化率：m 不變號但變化率變號時，
+  以黃金分割求區間內的極值，若極小值 < 0 就在兩側各求一次根——**短於取樣步長的擦邊地影（高 β 角）也不會漏判**
+  （`ShortShadowTests` 以 0.97–8.39 秒的構造案例驗證）。
 - 可目視 = 過境期間「受日照」且「太陽仰角 < −6°」：兩個連續函數各自求根後合併區段，總長不足 1 秒不標示。
 - 接收頻率 = f0 × (1 − ṙ / c)；接近時 ṙ < 0、頻率升高。
 
@@ -189,7 +194,7 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 
 ## 測試
 
-`dotnet test` 共 360 個案例，全部通過；逐項驗收檢查、規格限制檢查與量測細節見 [docs/TEST-REPORT.md](docs/TEST-REPORT.md)。
+`dotnet test` 共 384 個案例，全部通過；逐項驗收檢查、規格限制檢查與量測細節見 [docs/TEST-REPORT.md](docs/TEST-REPORT.md)。
 
 - **性質測試**（16 組，`Property.Run`，固定種子；失敗時訊息列出可用 `Property.Replay(caseSeed)` 重現的種子）：
   UTC↔JD 往返與時間單調性、TLE 往返（格式化→解析→格式化）、目錄歷史規則、大地↔地固往返、TEME→地固保長、
@@ -225,18 +230,22 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 
 | 執行緒 | 耗時 |
 |---:|---:|
-| 1 | 2640 ms |
-| 2 | 1310 ms |
-| 4 | 748 ms |
-| 8 | **354 ms**（驗收要求 ≤ 2 秒） |
-| 24 | 135 ms |
+| 1 | 2582 ms |
+| 2 | 1380 ms |
+| 4 | 783 ms |
+| 8 | **317 ms**（驗收要求 ≤ 2 秒） |
+| 24 | 165 ms |
 
 | 項目 | 數值 |
 |---|---|
 | SGP4 單次呼叫 | 約 700 ns，**0 bytes** 配置（400 萬次呼叫量測） |
 | 傳播 + GMST + TEME→地固 + 站心觀測 | 約 1.0 µs，0 bytes |
-| 即時追蹤單次更新 | 中位數 1.2 µs，P99.9 3.0 µs，5000 次中最大 47.6 µs（要求 ≤ 1 ms） |
+| 即時追蹤單次更新 | 中位數 1.2 µs，P99.9 4.6 µs，5000 次中最大 13.1 µs（要求 ≤ 1 ms） |
 | 範例資料 30 顆 × 2 天（App 內） | 約 70 ms |
+
+> **效能數字的前提**：單執行緒約 **2.6 秒**、2 執行緒約 1.4 秒（本機）。驗收的 2 秒門檻以 8 核心為準；
+> 預報時間大致與「單核效能 × 核心數」成反比，所以單核心電腦，或單核效能明顯低於本機的 2–4 核心電腦，
+> 100 顆 × 7 天可能超過 2 秒。效能測試在核心數少於 8 的機器上會依比例放寬門檻並記錄實測值。
 
 重現：`dotnet test -c Release --filter Category=Performance --logger "console;verbosity=detailed"`。
 
@@ -260,11 +269,10 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 - **不支援深空軌道**（週期 ≥ 225 分鐘，如 GEO、GPS、Molniya）：只實作 SGP4 近地分支，未實作 SDP4。
 - 依假設事項：UT1 ≈ UTC、不處理極移與章動、不考慮大氣折射（仰角為幾何仰角）、傳播期間的閏秒忽略。
 - 太陽位置為低精度公式（約 0.01°）；陰影為圓柱模型，不分本影與半影，地球視為半徑 6378.137 km 的球。
-- 陰影與可目視以 10 秒取樣後求根，短於約 10 秒的陰影片段（高 β 角的掠過地影）可能漏判。
-- 過境搜尋假設相鄰仰角極值相隔大於 30 秒；這對近地軌道成立，但不是對任意軌道的數學保證。
+- 過境搜尋假設相鄰仰角極值相隔大於 30 秒，陰影搜尋假設邊界函數的相鄰極值相隔大於 10 秒；這對近地軌道成立
+  （極值約相隔半圈），但不是對任意軌道的數學保證。陰影極值偵測的變化率把太陽方向視為定值，深度小於約 0.2 公尺的極淺擦邊陰影可能仍會漏判。
 - 「起點前已開始」的過境，最大仰角取時間範圍內的最大值（真正的最大值可能在起點之前）。
 - SGP4 錯誤碼 1（高阻力使平均偏心率 ≥ 1）實務上通常代表衰減；診斷中會加註說明，但錯誤碼保持與參考實作一致。
-- 不支援 Alpha-5 衛星編號（≥ 100000）。
 - 介面沒有原生檔案對話框（ImGui），以路徑輸入或拖放匯入、以路徑輸入匯出。
 - 時區為固定 UTC 偏移，不處理日光節約時間。
 - 「單一程式執行個體」依假設事項由使用者保證，程式未強制。
@@ -281,7 +289,7 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 | 5 | 衰減 | `Sgp4PropagatorTests`、`PassFinderTests.Decay_stops_prediction_and_produces_diagnostic` |
 | 6 | 時間與 GMST | `JulianDateTests`、`GmstTests` |
 | 7 | 座標（132 組） | `CoordinateReferenceTests`、`CoordinateTests` |
-| 8 | 太陽與陰影 | `SunAndShadowTests` |
+| 8 | 太陽與陰影 | `SunAndShadowTests`、`ShortShadowTests` |
 | 9 | 過境 vs 暴力參考解（320 組） | `PassFinderPropertyTests.Property_matches_brute_force_reference` |
 | 10 | 掠過過境（60 組） | `PassFinderPropertyTests.Grazing_passes_just_above_mask_are_all_found` |
 | 11 | 時間範圍邊界與拆分 | `PassFinderTests`、`PassFinderPropertyTests.Property_window_split_invariance` |
@@ -295,7 +303,7 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 | 19 | CSV 匯出 | `PassCsvExporterTests`、`MainPresenterTests.Csv_export_uses_filtered_rows_and_csv_offset` |
 | 20 | 效能 | `PredictionPerformanceTests`、`Sgp4PropagatorTests.Propagate_does_not_allocate`、`PerformanceReportTests` |
 | 21 | 性質測試 | 見[測試](#測試) |
-| 22 | ≥ 200 個案例 | 360 個（Core＋Presenter 335 個） |
+| 22 | ≥ 200 個案例 | 384 個（Core＋Presenter 359 個） |
 | 23 | README | 本文件 |
 | 24 | GitHub Actions | `.github/workflows/ci.yml` |
 

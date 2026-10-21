@@ -7,7 +7,7 @@
 | 測試環境 | Windows 11 專業版、Intel Core i7-13700（24 個邏輯處理器）、.NET SDK 9.0.315、Release 建置 |
 | 測試框架 | xUnit 2.9.2、Microsoft.NET.Test.Sdk 17.12.0 |
 | 指令 | `dotnet build SkyPass.sln -c Release` → `dotnet test SkyPass.sln -c Release --no-build` |
-| **結論** | **建置 0 警告、0 錯誤；360 個測試全部通過（0 失敗、0 略過），耗時約 25 秒。24 條驗收標準均符合**（#24 的 CI 結果見 [§8](#8-ci)） |
+| **結論** | **建置 0 警告、0 錯誤；360 個測試全部通過（0 失敗、0 略過），耗時約 25 秒；GitHub Actions 綠燈。24 條驗收標準均符合** |
 
 ## 目錄
 
@@ -109,7 +109,7 @@ Core 與 Presenter 的案例（不含 Data、架構、效能）共 335 個，符
 | 21 | ≥ 8 組性質測試，涵蓋座標往返、視窗拆分、與參考解一致、執行緒數無關、單位換算、時間單調性、TLE 往返、遮罩單調縮小 | 性質測試 | 16 組（見下表），8 個指定主題全部涵蓋 | ✅ |
 | 22 | Core 與 Presenter 至少 200 個案例，`dotnet test` 全數通過 | 執行測試 | 360 個全數通過（Core＋Presenter 335 個） | ✅ |
 | 23 | README 含建置步驟、操作截圖、架構、SGP4／座標／過境搜尋演算法（含避免漏掉掠過過境）、效能數據、參考資料產生方式、設計取捨、已知限制 | 檢視 README | 逐節核對 [README](../README.md) 皆具備；截圖 5 張 | ✅ |
-| 24 | GitHub Actions 在 Windows runner 建置（含 App）並測試、綠燈、README 徽章、上傳 win-x64 發佈檔 | 檢視 Actions | `.github/workflows/ci.yml` 已就緒，本機以相同指令驗證通過；實際 Actions 結果見 §8 | 見 §8 |
+| 24 | GitHub Actions 在 Windows runner 建置（含 App）並測試、綠燈、README 徽章、上傳 win-x64 發佈檔 | 檢視 Actions | [執行 #39551531671](https://github.com/hn83320589/SkyPass/actions/runs/39551531671)（commit `8f3997f`）：建置（含 App）、測試、發佈全部成功；artifact `test-results`、`SkyPass-win-x64` 已上傳；README 已有徽章 | ✅ |
 
 ### 性質測試清單（#21）
 
@@ -198,7 +198,14 @@ Release 建置，量測時效能測試不與其他測試平行執行。
 
 本機已以相同指令驗證：建置 0 警告、測試 360/360、發佈檔約 82 MB，包含 `glfw3.dll`、`cimgui.dll`、`e_sqlite3.dll`。
 
-**GitHub Actions 執行結果**：提交後的第一次執行結果記錄於此（見下方更新）。
+**GitHub Actions 執行結果**（首次推送，commit `8f3997f`）：
+
+| 項目 | 結果 |
+|---|---|
+| 執行 | [#39551531671](https://github.com/hn83320589/SkyPass/actions/runs/39551531671)，`windows-latest`，2026-10-21 05:47–05:50 UTC（約 3 分鐘） |
+| 步驟 | Restore、Build（含 App）、Test、Upload test results、Publish win-x64、Upload win-x64 publish：**全部 success** |
+| Artifact | `test-results`（TRX，約 81 KB）、`SkyPass-win-x64`（壓縮後約 39 MB） |
+| 結論 | **綠燈** |
 
 ## 9. 未涵蓋範圍與風險
 

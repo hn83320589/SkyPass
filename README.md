@@ -307,4 +307,4 @@ WGS-72 常數、opsmode `'i'`、近地點 < 220 km 時 `isimp = 1`（省略 d2�
 | 23 | README | 本文件 |
 | 24 | GitHub Actions | `.github/workflows/ci.yml` |
 
-交付物另含：[測試報告](docs/TEST-REPORT.md)、[範例資料與預期過境表](samples/README.md)、[逐步手算範例](docs/hand-calculations.md)、[參考資料產生工具](tools/refgen/README.md)、[設計文件](docs/DESIGN.md)。
+交付物另含：[教學文件](docs/tutorial/README.md)、[測試報告](docs/TEST-REPORT.md)、[範例資料與預期過境表](samples/README.md)、[逐步手算範例](docs/hand-calculations.md)、[參考資料產生工具](tools/refgen/README.md)、[設計文件](docs/DESIGN.md)。

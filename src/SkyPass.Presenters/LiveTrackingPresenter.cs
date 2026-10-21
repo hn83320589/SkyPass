@@ -43,10 +43,14 @@ public sealed class LiveTrackingPresenter(TimeProvider clock)
     private PassCache? _cache;
     private Task _pending = Task.CompletedTask;
     private int _pendingConfigVersion = -1;
+    private int _cacheVersion;
 
     public TleSet? Satellite => _propagator?.Tle;
 
     public LiveReading? Latest { get; private set; }
+
+    /// <summary>過境快取每次更新時遞增；UI 可據此在快取完成後立即重新 Tick，而不必等到下一秒。</summary>
+    public int CacheVersion => Volatile.Read(ref _cacheVersion);
 
     /// <summary>設定追蹤對象；與目前設定相同時不做任何事（可每幀呼叫）。</summary>
     public void Configure(TleSet? tle, Geodetic site, double maskDeg, double downlinkHz)
@@ -175,6 +179,7 @@ public sealed class LiveTrackingPresenter(TimeProvider clock)
                     if (_configVersion == version)
                     {
                         Volatile.Write(ref _cache, new PassCache(version, start, end, result.Passes, result.Diagnostic));
+                        Interlocked.Increment(ref _cacheVersion);
                     }
                 }
             });

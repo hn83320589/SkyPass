@@ -100,10 +100,13 @@ public class LiveTrackingPresenterTests(ITestOutputHelper output)
         await p.WhenIdleAsync();
         var issReading = p.Tick()!;
 
+        var cacheVersion = p.CacheVersion;
         p.Configure(Css, Taipei, 10, 145.8e6);
         var pending = p.Tick()!;
         await p.WhenIdleAsync();
         var cssReading = p.Tick()!;
+
+        Assert.True(p.CacheVersion > cacheVersion, "快取完成後版本應遞增，讓 UI 立即更新");
 
         Assert.Equal(48274, p.Satellite!.NoradId);
         Assert.NotEqual(issReading.RangeKm, cssReading.RangeKm);
